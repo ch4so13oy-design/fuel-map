@@ -20,44 +20,156 @@
             height: 100vh;
         }
         
-        /* Панель фильтров сверху */
-        .filters-panel {
+        /* Кнопка открытия меню */
+        .menu-toggle {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
+            bottom: 20px;
+            right: 20px;
             z-index: 1000;
-            background: white;
-            padding: 12px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: #2563eb;
+            color: white;
+            border: none;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+            font-size: 24px;
+            cursor: pointer;
             display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+        .menu-toggle:hover {
+            transform: scale(1.1);
+        }
+        .menu-toggle.active {
+            transform: rotate(45deg);
+        }
+        
+        /* Выдвижное меню */
+        .filter-menu {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 999;
+            background: white;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .filter-menu.open {
+            transform: translateY(0);
+        }
+        .menu-header {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .menu-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+        .menu-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #64748b;
+            cursor: pointer;
+        }
+        .menu-content {
+            padding: 20px;
+        }
+        .filter-section {
+            margin-bottom: 24px;
+        }
+        .filter-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .filter-options {
+            display: flex;
+            flex-wrap: wrap;
             gap: 8px;
-            overflow-x: auto;
-            scrollbar-width: none;
         }
-        .filters-panel::-webkit-scrollbar {
-            display: none;
-        }
-        .filter-btn {
-            padding: 8px 16px;
+        .filter-chip {
+            padding: 10px 16px;
             border: 2px solid #e2e8f0;
             background: white;
             border-radius: 20px;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            white-space: nowrap;
             transition: all 0.2s;
         }
-        .filter-btn:hover {
+        .filter-chip:hover {
             border-color: #2563eb;
             color: #2563eb;
         }
-        .filter-btn.active {
+        .filter-chip.selected {
             background: #2563eb;
             color: white;
             border-color: #2563eb;
+        }
+        .apply-btn {
+            width: 100%;
+            padding: 16px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .apply-btn:hover {
+            background: #1d4ed8;
+        }
+        .reset-btn {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            color: #64748b;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .reset-btn:hover {
+            border-color: #64748b;
+            color: #1a1a1a;
+        }
+        
+        /* Затемнение фона */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.3);
+            z-index: 998;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .overlay.active {
+            opacity: 1;
+            pointer-events: auto;
         }
         
         /* Стили для всплывающего окна */
@@ -108,14 +220,44 @@
     </style>
 </head>
 <body>
-    <!-- Панель фильтров -->
-    <div class="filters-panel">
-        <button class="filter-btn active" data-filter="all">Все</button>
-        <button class="filter-btn" data-filter="АИ-92">АИ-92</button>
-        <button class="filter-btn" data-filter="АИ-95">АИ-95</button>
-        <button class="filter-btn" data-filter="АИ-98">АИ-98</button>
-        <button class="filter-btn" data-filter="ДТ">ДТ</button>
-        <button class="filter-btn" data-filter="free">🟢 Свободные</button>
+    <!-- Затемнение фона -->
+    <div class="overlay" id="overlay"></div>
+    
+    <!-- Кнопка открытия меню -->
+    <button class="menu-toggle" id="menuToggle">⚙️</button>
+    
+    <!-- Выдвижное меню -->
+    <div class="filter-menu" id="filterMenu">
+        <div class="menu-header">
+            <span class="menu-title">Фильтры</span>
+            <button class="menu-close" id="menuClose">✕</button>
+        </div>
+        <div class="menu-content">
+            <!-- Тип топлива -->
+            <div class="filter-section">
+                <div class="filter-section-title">Тип топлива</div>
+                <div class="filter-options">
+                    <div class="filter-chip" data-filter="АИ-92">АИ-92</div>
+                    <div class="filter-chip" data-filter="АИ-95">АИ-95</div>
+                    <div class="filter-chip" data-filter="АИ-98">АИ-98</div>
+                    <div class="filter-chip" data-filter="ДТ">ДТ</div>
+                </div>
+            </div>
+            
+            <!-- Загруженность -->
+            <div class="filter-section">
+                <div class="filter-section-title">Загруженность</div>
+                <div class="filter-options">
+                    <div class="filter-chip" data-filter="low">🟢 Свободно</div>
+                    <div class="filter-chip" data-filter="medium">🟡 Умеренно</div>
+                    <div class="filter-chip" data-filter="high">🔴 Очередь</div>
+                </div>
+            </div>
+            
+            <!-- Кнопки -->
+            <button class="apply-btn" id="applyFilters">Применить фильтры</button>
+            <button class="reset-btn" id="resetFilters">Сбросить все</button>
+        </div>
     </div>
     
     <div id="map"></div>
@@ -136,6 +278,10 @@
         // Массив для хранения меток
         let markers = [];
         let stationsData = [];
+        let selectedFilters = {
+            fuels: [],
+            loads: []
+        };
         
         // Функция для определения цвета метки
         function getMarkerColor(load) {
@@ -199,37 +345,96 @@
         }
         
         // Функция фильтрации
-        function filterStations(filterType) {
+        function filterStations() {
             let filtered = stationsData;
             
-            if (filterType !== 'all') {
-                if (filterType === 'free') {
-                    // Только свободные
-                    filtered = stationsData.filter(station => station.load === 'low');
-                } else {
-                    // По типу топлива
-                    filtered = stationsData.filter(station => 
-                        station.fuels.some(fuel => fuel.type === filterType && fuel.available)
-                    );
-                }
+            // Фильтр по топливу
+            if (selectedFilters.fuels.length > 0) {
+                filtered = filtered.filter(station => 
+                    station.fuels.some(fuel => 
+                        selectedFilters.fuels.includes(fuel.type) && fuel.available
+                    )
+                );
+            }
+            
+            // Фильтр по загруженности
+            if (selectedFilters.loads.length > 0) {
+                filtered = filtered.filter(station => 
+                    selectedFilters.loads.includes(station.load)
+                );
             }
             
             displayMarkers(filtered);
         }
         
-        // Обработчики кнопок фильтров
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                // Убираем активный класс у всех кнопок
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                // Добавляем активный класс нажатой кнопке
-                this.classList.add('active');
+        // Обработчики чипов фильтров
+        document.querySelectorAll('.filter-chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                this.classList.toggle('selected');
                 
-                // Фильтруем
-                const filterType = this.getAttribute('data-filter');
-                filterStations(filterType);
+                const filterValue = this.getAttribute('data-filter');
+                
+                // Определяем, это топливо или загруженность
+                if (['АИ-92', 'АИ-95', 'АИ-98', 'ДТ'].includes(filterValue)) {
+                    if (this.classList.contains('selected')) {
+                        selectedFilters.fuels.push(filterValue);
+                    } else {
+                        selectedFilters.fuels = selectedFilters.fuels.filter(f => f !== filterValue);
+                    }
+                } else {
+                    if (this.classList.contains('selected')) {
+                        selectedFilters.loads.push(filterValue);
+                    } else {
+                        selectedFilters.loads = selectedFilters.loads.filter(l => l !== filterValue);
+                    }
+                }
             });
         });
+        
+        // Кнопка применения фильтров
+        document.getElementById('applyFilters').addEventListener('click', function() {
+            filterStations();
+            closeMenu();
+        });
+        
+        // Кнопка сброса фильтров
+        document.getElementById('resetFilters').addEventListener('click', function() {
+            selectedFilters = { fuels: [], loads: [] };
+            document.querySelectorAll('.filter-chip').forEach(chip => {
+                chip.classList.remove('selected');
+            });
+            displayMarkers(stationsData);
+            closeMenu();
+        });
+        
+        // Открытие/закрытие меню
+        const menuToggle = document.getElementById('menuToggle');
+        const filterMenu = document.getElementById('filterMenu');
+        const overlay = document.getElementById('overlay');
+        const menuClose = document.getElementById('menuClose');
+        
+        function openMenu() {
+            filterMenu.classList.add('open');
+            overlay.classList.add('active');
+            menuToggle.classList.add('active');
+        }
+        
+        function closeMenu() {
+            filterMenu.classList.remove('open');
+            overlay.classList.remove('active');
+            menuToggle.classList.remove('active');
+        }
+        
+        menuToggle.addEventListener('click', function() {
+            if (filterMenu.classList.contains('open')) {
+                closeMenu();
+            } else {
+                openMenu();
+            }
+        });
+        
+        menuClose.addEventListener('click', closeMenu);
+        overlay.addEventListener('click', closeMenu);
         
         // Загружаем данные из stations.json
         fetch('data/stations.json')
