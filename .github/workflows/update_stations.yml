@@ -1,0 +1,36 @@
+name: Обновление данных АЗС
+
+on:
+  schedule:
+    # Запуск каждые 40 минут
+    - cron: '*/40 * * * *'
+  workflow_dispatch:  # Возможность запустить вручную
+
+jobs:
+  update-stations:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout репозитория
+        uses: actions/checkout@v4
+      
+      - name: Установка Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Установка зависимостей
+        run: |
+          pip install requests
+      
+      - name: Запуск скрипта сбора данных
+        run: |
+          python scripts/fetch_stations.py
+      
+      - name: Коммит и пуш обновлённых данных
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/stations.json
+          git diff --staged --quiet || git commit -m "Автообновление данных АЗС $(date +'%Y-%m-%d %H:%M')"
+          git push
