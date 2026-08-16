@@ -7,6 +7,9 @@
     
     <!-- Подключаем стили Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Подключаем плагин кластеризации -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     
     <style>
         body {
@@ -30,6 +33,28 @@
         .leaflet-control-attribution a {
             color: #666 !important;
         }
+        
+        /* Стили для меток с буквами */
+        .brand-marker {
+            background: #2563eb;
+            border: 2px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        
+        /* Цвета для разных брендов */
+        .brand-lukoil { background: #e31e24; }
+        .brand-rosneft { background: #0066cc; }
+        .brand-gazprom { background: #00a651; }
+        .brand-tatneft { background: #ff6600; }
+        .brand-bashneft { background: #8b0000; }
+        .brand-default { background: #64748b; }
         
         /* Кнопка открытия меню */
         .menu-toggle {
@@ -275,14 +300,16 @@
     
     <!-- Подключаем скрипт Leaflet -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Подключаем плагин кластеризации -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     
     <script>
         // Создаём карту, центр — Москва
         var map = L.map('map', {
-            attributionControl: false  // Отключаем стандартный контроль атрибуции
-        }).setView([55.7558, 37.6173], 12);
+            attributionControl: false
+        }).setView([55.7558, 37.6173], 9);
         
-        // Добавляем красочный слой карты CartoDB Voyager
+        // Добавляем светлый слой карты CartoDB Voyager
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             maxZoom: 19
         }).addTo(map);
@@ -292,20 +319,36 @@
             prefix: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>'
         }).addTo(map);
         
-        // Массив для хранения меток
-        let markers = [];
+        // Создаём группу для кластеризации
+        var markers = L.markerClusterGroup({
+            maxClusterRadius: 50,
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: true
+        });
+        
         let stationsData = [];
         let selectedFilters = {
             fuels: [],
             loads: []
         };
         
-        // Функция для определения цвета метки
-        function getMarkerColor(load) {
-            if (load === 'low') return '#16a34a';
-            if (load === 'medium') return '#ca8a04';
-            if (load === 'high') return '#dc2626';
-            return '#94a3b8';
+        // Функция для получения первой буквы бренда
+        function getBrandLetter(brand) {
+            if (!brand || brand === 'Неизвестно') return '?';
+            return brand.charAt(0).toUpperCase();
+        }
+        
+        // Функция для получения класса цвета бренда
+        function getBrandClass(brand) {
+            if (!brand) return 'brand-default';
+            const brandLower = brand.toLowerCase();
+            if (brandLower.includes('лукойл') || brandLower.includes('lukoil')) return 'brand-lukoil';
+            if (brandLower.includes('роснефть') || brandLower.includes('rosneft')) return 'brand-rosneft';
+            if (brandLower.includes('газпром') || brandLower.includes('gazprom')) return 'brand-gazprom';
+            if (brandLower.includes('татнефть') || brandLower.includes('tatneft')) return 'brand-tatneft';
+            if (brandLower.includes('башнефть') || brandLower.includes('bashneft')) return 'brand-bashneft';
+            return 'brand-default';
         }
         
         // Функция для создания HTML всплывающего окна
@@ -317,7 +360,7 @@
                 fuelsHtml += `
                     <div class="fuel-row">
                         <span>${fuel.type}</span>
-                        <span>${fuel.price} ₽ <span class="${statusClass}">${statusText}</span></span>
+                        <span>${fuel.price > 0 ? fuel.price + ' ₽' : '—'} <span class="${statusClass}">${statusText}</span></span>
                     </div>
                 `;
             });
@@ -325,47 +368,47 @@
             const loadText = {
                 'low': '🟢 Свободно',
                 'medium': '🟡 Умеренно',
-                'high': '🔴 Очередь'
+                'high': '🔴 Очередь',
+                'unknown': '⚪ Нет данных'
             };
             
             return `
                 <div class="station-name">${station.name}</div>
                 <div class="station-info">${station.brand} · ${station.address}</div>
                 ${fuelsHtml}
-                <div class="load-${station.load}" style="margin-top: 8px;">${loadText[station.load]}</div>
+                <div class="load-${station.load}" style="margin-top: 8px;">${loadText[station.load] || loadText['unknown']}</div>
                 <div class="updated-time">Обновлено: ${new Date(station.updated_at).toLocaleString('ru-RU')}</div>
             `;
         }
         
         // Функция для отображения меток
         function displayMarkers(stations) {
-            // Удаляем старые метки
-            markers.forEach(marker => map.removeLayer(marker));
-            markers = [];
+            markers.clearLayers();
             
-            // Добавляем новые метки
             stations.forEach(station => {
-                const color = getMarkerColor(station.load);
+                const letter = getBrandLetter(station.brand);
+                const brandClass = getBrandClass(station.brand);
                 
-                const marker = L.circleMarker([station.lat, station.lng], {
-                    radius: 10,
-                    fillColor: color,
-                    color: '#fff',
-                    weight: 2,
-                    opacity: 1,
-                    fillOpacity: 0.9
-                }).addTo(map);
+                // Создаём кастомную иконку с буквой
+                const icon = L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div class="brand-marker ${brandClass}">${letter}</div>`,
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16]
+                });
                 
+                const marker = L.marker([station.lat, station.lng], { icon: icon });
                 marker.bindPopup(createPopupContent(station));
-                markers.push(marker);
+                markers.addLayer(marker);
             });
+            
+            map.addLayer(markers);
         }
         
         // Функция фильтрации
         function filterStations() {
             let filtered = stationsData;
             
-            // Фильтр по топливу
             if (selectedFilters.fuels.length > 0) {
                 filtered = filtered.filter(station => 
                     station.fuels.some(fuel => 
@@ -374,7 +417,6 @@
                 );
             }
             
-            // Фильтр по загруженности
             if (selectedFilters.loads.length > 0) {
                 filtered = filtered.filter(station => 
                     selectedFilters.loads.includes(station.load)
@@ -391,7 +433,6 @@
                 
                 const filterValue = this.getAttribute('data-filter');
                 
-                // Определяем, это топливо или загруженность
                 if (['АИ-92', 'АИ-95', 'АИ-98', 'ДТ'].includes(filterValue)) {
                     if (this.classList.contains('selected')) {
                         selectedFilters.fuels.push(filterValue);
