@@ -269,10 +269,10 @@
         // Создаём карту, центр — Москва
         var map = L.map('map').setView([55.7558, 37.6173], 12);
         
-        // Добавляем светлый слой карты Esri Light Gray Canvas
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-            attribution: '© Esri, HERE, Garmin, FAO, NOAA, USGS',
-            maxZoom: 16
+        // Добавляем слой карты 2ГИС (бесплатный тариф)
+        L.tileLayer('https://tile{0-3}.maps.2gis.com/tiles?x={x}&y={y}&z={z}&v=1&ts=online_sd', {
+            attribution: '© 2ГИС',
+            maxZoom: 18
         }).addTo(map);
         
         // Массив для хранения меток
