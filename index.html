@@ -127,10 +127,10 @@
         // Создаём карту, центр — Москва
         var map = L.map('map').setView([55.7558, 37.6173], 12);
         
-        // Добавляем светлый слой карты CartoDB Voyager
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap © CARTO Voyager',
-            maxZoom: 19
+        // Добавляем светлый слой карты Esri Light Gray Canvas
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '© Esri, HERE, Garmin, FAO, NOAA, USGS',
+            maxZoom: 16
         }).addTo(map);
         
         // Массив для хранения меток
