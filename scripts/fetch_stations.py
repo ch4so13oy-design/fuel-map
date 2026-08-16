@@ -68,7 +68,7 @@ for item in data:
     elif status == 'yes':
         load = 'low'  # Есть топливо, нет очереди
     else:
-        load = 'unknown'
+        load = 'unknown'  # Нет данных
     
     # Получаем бренд и название
     brand = item.get('brand', 'Неизвестно')
@@ -80,13 +80,21 @@ for item in data:
     prices_now = item.get('prices_now', {})
     fuels = []
     
-    # Если статус "нет топлива", помечаем все как недоступные
+    # Если статус "нет топлива"
     if load == 'high':
         fuels = [
             {'type': 'АИ-92', 'price': 0, 'available': False},
             {'type': 'АИ-95', 'price': 0, 'available': False},
             {'type': 'ДТ', 'price': 0, 'available': False}
         ]
+    # Если статус "нет данных" - помечаем всё как неизвестное
+    elif load == 'unknown':
+        fuels = [
+            {'type': 'АИ-92', 'price': 0, 'available': None},
+            {'type': 'АИ-95', 'price': 0, 'available': None},
+            {'type': 'ДТ', 'price': 0, 'available': None}
+        ]
+    # Если есть топливо - парсим реальное наличие
     elif fuels_now:
         fuel_list = [f.strip() for f in fuels_now.split(',')]
         for fuel in fuel_list:
@@ -115,19 +123,25 @@ for item in data:
                 'available': True
             })
     
-    # Если нет информации о топливе и статус неизвестен
+    # Если нет информации о топливе и статус известен
     if not fuels:
-        fuels = [
-            {'type': 'АИ-92', 'price': 0, 'available': True},
-            {'type': 'АИ-95', 'price': 0, 'available': True},
-            {'type': 'ДТ', 'price': 0, 'available': True}
-        ]
+        if load == 'unknown':
+            fuels = [
+                {'type': 'АИ-92', 'price': 0, 'available': None},
+                {'type': 'АИ-95', 'price': 0, 'available': None},
+                {'type': 'ДТ', 'price': 0, 'available': None}
+            ]
+        else:
+            fuels = [
+                {'type': 'АИ-92', 'price': 0, 'available': True},
+                {'type': 'АИ-95', 'price': 0, 'available': True},
+                {'type': 'ДТ', 'price': 0, 'available': True}
+            ]
     
     # Время последнего обновления в московском часовом поясе
     last_at_str = item.get('last_at', '')
     if last_at_str:
         try:
-            # Парсим время и конвертируем в МСК
             dt = datetime.fromisoformat(last_at_str.replace('Z', '+00:00'))
             dt_msk = dt.astimezone(MSK_TZ)
             last_at = dt_msk.isoformat()
@@ -156,11 +170,13 @@ print(f"Найдено АЗС: {len(stations)}")
 with_fuel = sum(1 for s in stations if s['load'] == 'low')
 with_queue = sum(1 for s in stations if s['load'] == 'medium')
 no_fuel = sum(1 for s in stations if s['load'] == 'high')
+no_data = sum(1 for s in stations if s['load'] == 'unknown')
 with_prices = sum(1 for s in stations if any(f['price'] > 0 for f in s['fuels']))
 
 print(f"С топливом: {with_fuel}")
 print(f"С очередью: {with_queue}")
 print(f"Без топлива: {no_fuel}")
+print(f"Нет данных: {no_data}")
 print(f"С ценами: {with_prices}")
 
 if len(stations) == 0:
