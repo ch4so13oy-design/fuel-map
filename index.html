@@ -282,14 +282,14 @@
             attributionControl: false  // Отключаем стандартный контроль атрибуции
         }).setView([55.7558, 37.6173], 12);
         
-        // Добавляем слой OpenStreetMap
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // Добавляем светлый слой карты CartoDB Positron
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             maxZoom: 19
         }).addTo(map);
         
         // Добавляем маленькую Attribution вручную
         L.control.attribution({
-            prefix: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            prefix: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>'
         }).addTo(map);
         
         // Массив для хранения меток
