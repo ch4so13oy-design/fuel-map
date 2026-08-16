@@ -1,8 +1,8 @@
 import requests
 import json
 import math
-import time
 from datetime import datetime
+from urllib.parse import quote
 
 # Координаты центра (Москва)
 CENTER_LAT = 55.7558
@@ -32,7 +32,16 @@ out center body;
 print("Запрашиваю данные из OpenStreetMap...")
 
 try:
-    response = requests.post(overpass_url, data=overpass_query, timeout=120)
+    # Используем GET с параметром data
+    response = requests.get(
+        overpass_url,
+        params={'data': overpass_query},
+        headers={
+            'User-Agent': 'FuelMapBot/1.0',
+            'Accept': 'application/json'
+        },
+        timeout=120
+    )
     response.raise_for_status()
     
     # Проверяем, что ответ не пустой
@@ -44,6 +53,9 @@ try:
     
 except requests.exceptions.RequestException as e:
     print(f"Ошибка при запросе к Overpass API: {e}")
+    if hasattr(e, 'response') and e.response is not None:
+        print(f"Код ответа: {e.response.status_code}")
+        print(f"Текст ответа: {e.response.text[:500]}")
     exit(1)
 except json.JSONDecodeError as e:
     print(f"Ошибка парсинга JSON: {e}")
