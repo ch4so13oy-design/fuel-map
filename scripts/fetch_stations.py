@@ -2,12 +2,11 @@ import requests
 import json
 import math
 from datetime import datetime
-from urllib.parse import quote
 
 # Координаты центра (Москва)
 CENTER_LAT = 55.7558
 CENTER_LNG = 37.6173
-RADIUS_KM = 200
+RADIUS_KM = 100  # Уменьшили радиус до 100 км
 
 # Функция для расчёта расстояния между двумя точками
 def haversine(lat1, lng1, lat2, lng2):
@@ -21,7 +20,7 @@ def haversine(lat1, lng1, lat2, lng2):
 # Запрос к Overpass API
 overpass_url = "https://overpass-api.de/api/interpreter"
 overpass_query = f"""
-[out:json][timeout:90];
+[out:json][timeout:180];
 (
   node["amenity"="fuel"](around:{RADIUS_KM * 1000},{CENTER_LAT},{CENTER_LNG});
   way["amenity"="fuel"](around:{RADIUS_KM * 1000},{CENTER_LAT},{CENTER_LNG});
@@ -32,7 +31,6 @@ out center body;
 print("Запрашиваю данные из OpenStreetMap...")
 
 try:
-    # Используем GET с параметром data
     response = requests.get(
         overpass_url,
         params={'data': overpass_query},
@@ -40,11 +38,10 @@ try:
             'User-Agent': 'FuelMapBot/1.0',
             'Accept': 'application/json'
         },
-        timeout=120
+        timeout=200
     )
     response.raise_for_status()
     
-    # Проверяем, что ответ не пустой
     if not response.text.strip():
         print("Ошибка: Overpass API вернул пустой ответ")
         exit(1)
@@ -64,7 +61,6 @@ except json.JSONDecodeError as e:
 
 stations = []
 for element in data.get('elements', []):
-    # Получаем координаты
     if 'lat' in element:
         lat = element['lat']
         lng = element['lon']
@@ -74,19 +70,15 @@ for element in data.get('elements', []):
     else:
         continue
     
-    # Проверяем расстояние
     distance = haversine(CENTER_LAT, CENTER_LNG, lat, lng)
     if distance > RADIUS_KM:
         continue
     
-    # Получаем теги
     tags = element.get('tags', {})
     
-    # Определяем название и бренд
     name = tags.get('name', 'АЗС')
     brand = tags.get('brand', tags.get('operator', 'Неизвестно'))
     
-    # Собираем адрес
     address_parts = []
     if tags.get('addr:city'):
         address_parts.append(tags['addr:city'])
@@ -96,7 +88,6 @@ for element in data.get('elements', []):
         address_parts.append(tags['addr:housenumber'])
     address = ', '.join(address_parts) if address_parts else 'Адрес не указан'
     
-    # Определяем виды топлива
     fuels = []
     fuel_types = {
         'fuel:octane_92': 'АИ-92',
@@ -114,7 +105,6 @@ for element in data.get('elements', []):
                 'available': True
             })
     
-    # Если нет информации о топливе, добавляем базовый набор
     if not fuels:
         fuels = [
             {'type': 'АИ-92', 'price': 0, 'available': True},
@@ -139,10 +129,9 @@ for element in data.get('elements', []):
 print(f"Найдено АЗС: {len(stations)}")
 
 if len(stations) == 0:
-    print("Предупреждение: Не найдено ни одной АЗС. Возможно, проблема с запросом.")
+    print("Предупреждение: Не найдено ни одной АЗС.")
     exit(1)
 
-# Сохраняем в файл
 with open('data/stations.json', 'w', encoding='utf-8') as f:
     json.dump(stations, f, ensure_ascii=False, indent=2)
 
