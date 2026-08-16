@@ -34,9 +34,8 @@
             color: #666 !important;
         }
         
-        /* Стили для меток с буквами */
+        /* Стили для меток с буквами и цветами по статусу */
         .brand-marker {
-            background: #2563eb;
             border: 2px solid white;
             border-radius: 50%;
             display: flex;
@@ -48,13 +47,11 @@
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
         
-        /* Цвета для разных брендов */
-        .brand-lukoil { background: #e31e24; }
-        .brand-rosneft { background: #0066cc; }
-        .brand-gazprom { background: #00a651; }
-        .brand-tatneft { background: #ff6600; }
-        .brand-bashneft { background: #8b0000; }
-        .brand-default { background: #64748b; }
+        /* Цвета по статусу топлива */
+        .status-low { background: #16a34a; }      /* Зелёный - есть топливо */
+        .status-medium { background: #ca8a04; }   /* Жёлтый - очередь */
+        .status-high { background: #dc2626; }     /* Красный - нет топлива */
+        .status-unknown { background: #64748b; }  /* Серый - нет данных */
         
         /* Кнопка открытия меню */
         .menu-toggle {
@@ -339,16 +336,12 @@
             return brand.charAt(0).toUpperCase();
         }
         
-        // Функция для получения класса цвета бренда
-        function getBrandClass(brand) {
-            if (!brand) return 'brand-default';
-            const brandLower = brand.toLowerCase();
-            if (brandLower.includes('лукойл') || brandLower.includes('lukoil')) return 'brand-lukoil';
-            if (brandLower.includes('роснефть') || brandLower.includes('rosneft')) return 'brand-rosneft';
-            if (brandLower.includes('газпром') || brandLower.includes('gazprom')) return 'brand-gazprom';
-            if (brandLower.includes('татнефть') || brandLower.includes('tatneft')) return 'brand-tatneft';
-            if (brandLower.includes('башнефть') || brandLower.includes('bashneft')) return 'brand-bashneft';
-            return 'brand-default';
+        // Функция для получения класса цвета по статусу
+        function getStatusClass(load) {
+            if (load === 'low') return 'status-low';
+            if (load === 'medium') return 'status-medium';
+            if (load === 'high') return 'status-high';
+            return 'status-unknown';
         }
         
         // Функция для создания HTML всплывающего окна
@@ -407,12 +400,12 @@
             
             stations.forEach(station => {
                 const letter = getBrandLetter(station.brand);
-                const brandClass = getBrandClass(station.brand);
+                const statusClass = getStatusClass(station.load);
                 
-                // Создаём кастомную иконку с буквой
+                // Создаём кастомную иконку с буквой и цветом по статусу
                 const icon = L.divIcon({
                     className: 'custom-marker',
-                    html: `<div class="brand-marker ${brandClass}">${letter}</div>`,
+                    html: `<div class="brand-marker ${statusClass}">${letter}</div>`,
                     iconSize: [32, 32],
                     iconAnchor: [16, 16]
                 });
