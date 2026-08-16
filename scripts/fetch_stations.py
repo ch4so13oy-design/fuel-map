@@ -4,8 +4,6 @@ from datetime import datetime
 import time
 
 # Координаты прямоугольника (Москва и область до ~100 км)
-# lat1, lon1 - юго-западный угол
-# lat2, lon2 - северо-восточный угол
 LAT1 = 54.5
 LON1 = 36.0
 LAT2 = 57.0
@@ -48,34 +46,33 @@ except json.JSONDecodeError as e:
 stations = []
 
 for item in data:
-    # Пропускаем заправки без координат
     if 'lat' not in item or 'lon' not in item:
         continue
     
     lat = float(item['lat'])
     lng = float(item['lon'])
     
-    # Определяем статус
+    # Определяем статус и загруженность
     status = item.get('status', 'unknown')
-    if status == 'yes':
-        load = 'low'  # Есть топливо
+    conflict = item.get('conflict', '')
+    
+    if status == 'yes' and conflict != 'queue':
+        load = 'low'  # Есть топливо, нет очереди
+    elif status == 'yes' and conflict == 'queue':
+        load = 'medium'  # Есть топливо, но очередь
     elif status == 'no':
         load = 'high'  # Нет топлива
     else:
         load = 'unknown'
-    
-    # Проверяем очередь
-    conflict = item.get('conflict', '')
-    if conflict == 'queue':
-        load = 'medium'  # Очередь
     
     # Получаем бренд и название
     brand = item.get('brand', 'Неизвестно')
     name = item.get('name', brand)
     address = item.get('addr', 'Адрес не указан')
     
-    # Получаем доступное топливо
+    # Получаем доступное топливо и цены
     fuels_now = item.get('fuels_now', '')
+    prices_now = item.get('prices_now', {})
     fuels = []
     
     if fuels_now:
@@ -91,15 +88,18 @@ for item in data:
             }
             fuel_name = fuel_type_map.get(fuel, fuel)
             
-            # Получаем цену если есть
+            # Получаем цену
             price = 0
-            prices = item.get('prices_now', {})
-            if fuel in prices:
-                price = prices[fuel].get('p', 0)
+            if fuel in prices_now:
+                price_data = prices_now[fuel]
+                if isinstance(price_data, dict):
+                    price = price_data.get('p', 0)
+                elif isinstance(price_data, (int, float)):
+                    price = price_data
             
             fuels.append({
                 'type': fuel_name,
-                'price': price,
+                'price': round(price, 2) if price else 0,
                 'available': True
             })
     
@@ -129,6 +129,17 @@ for item in data:
     stations.append(station)
 
 print(f"Найдено АЗС: {len(stations)}")
+
+# Подсчёт статистики
+with_fuel = sum(1 for s in stations if s['load'] == 'low')
+with_queue = sum(1 for s in stations if s['load'] == 'medium')
+no_fuel = sum(1 for s in stations if s['load'] == 'high')
+with_prices = sum(1 for s in stations if any(f['price'] > 0 for f in s['fuels']))
+
+print(f"С топливом: {with_fuel}")
+print(f"С очередью: {with_queue}")
+print(f"Без топлива: {no_fuel}")
+print(f"С ценами: {with_prices}")
 
 if len(stations) == 0:
     print("Предупреждение: Не найдено ни одной АЗС.")
