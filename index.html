@@ -20,6 +20,17 @@
             height: 100vh;
         }
         
+        /* Убираем надпись Leaflet и делаем attribution маленьким */
+        .leaflet-control-attribution {
+            font-size: 9px !important;
+            opacity: 0.5 !important;
+            background: rgba(255,255,255,0.7) !important;
+            padding: 2px 5px !important;
+        }
+        .leaflet-control-attribution a {
+            color: #666 !important;
+        }
+        
         /* Кнопка открытия меню */
         .menu-toggle {
             position: absolute;
@@ -267,12 +278,18 @@
     
     <script>
         // Создаём карту, центр — Москва
-        var map = L.map('map').setView([55.7558, 37.6173], 12);
+        var map = L.map('map', {
+            attributionControl: false  // Отключаем стандартный контроль атрибуции
+        }).setView([55.7558, 37.6173], 12);
         
-        // Добавляем слой OpenStreetMap с русскими подписями
+        // Добавляем слой OpenStreetMap
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap',
             maxZoom: 19
+        }).addTo(map);
+        
+        // Добавляем маленькую Attribution вручную
+        L.control.attribution({
+            prefix: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(map);
         
         // Массив для хранения меток
