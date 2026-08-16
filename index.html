@@ -48,10 +48,10 @@
         }
         
         /* Цвета по статусу топлива */
-        .status-low { background: #16a34a; }      /* Зелёный - есть топливо */
-        .status-medium { background: #ca8a04; }   /* Жёлтый - очередь */
-        .status-high { background: #dc2626; }     /* Красный - нет топлива */
-        .status-unknown { background: #64748b; }  /* Серый - нет данных */
+        .status-low { background: #16a34a; }
+        .status-medium { background: #ca8a04; }
+        .status-high { background: #dc2626; }
+        .status-unknown { background: #64748b; }
         
         /* Кнопка открытия меню */
         .menu-toggle {
@@ -350,7 +350,7 @@
             
             // Сначала показываем доступное топливо
             station.fuels.forEach(fuel => {
-                if (fuel.available) {
+                if (fuel.available === true) {
                     const priceText = fuel.price > 0 ? fuel.price + ' ₽' : '—';
                     fuelsHtml += `
                         <div class="fuel-row">
@@ -363,11 +363,23 @@
             
             // Потом показываем недоступное топливо (перечёркнутое, серое)
             station.fuels.forEach(fuel => {
-                if (!fuel.available) {
+                if (fuel.available === false) {
                     fuelsHtml += `
                         <div class="fuel-row" style="opacity: 0.5;">
                             <span style="text-decoration: line-through; color: #94a3b8;">${fuel.type}</span>
                             <span style="color: #94a3b8;"><span class="fuel-unavailable">❌ нет</span></span>
+                        </div>
+                    `;
+                }
+            });
+            
+            // Потом показываем неизвестное топливо (серое, без галочки)
+            station.fuels.forEach(fuel => {
+                if (fuel.available === null) {
+                    fuelsHtml += `
+                        <div class="fuel-row" style="opacity: 0.6;">
+                            <span style="color: #94a3b8;">${fuel.type}</span>
+                            <span style="color: #94a3b8;">⚪ неизвестно</span>
                         </div>
                     `;
                 }
@@ -425,7 +437,7 @@
             if (selectedFilters.fuels.length > 0) {
                 filtered = filtered.filter(station => 
                     station.fuels.some(fuel => 
-                        selectedFilters.fuels.includes(fuel.type) && fuel.available
+                        selectedFilters.fuels.includes(fuel.type) && fuel.available === true
                     )
                 );
             }
