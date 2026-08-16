@@ -1,6 +1,7 @@
 import requests
 import json
 import math
+import time
 from datetime import datetime
 
 # Координаты центра (Москва)
@@ -8,30 +9,46 @@ CENTER_LAT = 55.7558
 CENTER_LNG = 37.6173
 RADIUS_KM = 200
 
-# Функция для расчёта расстояния между двумя точками (формула гаверсинусов)
+# Функция для расчёта расстояния между двумя точками
 def haversine(lat1, lng1, lat2, lng2):
-    R = 6371  # Радиус Земли в км
+    R = 6371
     dLat = math.radians(lat2 - lat1)
     dLng = math.radians(lng2 - lng1)
     a = math.sin(dLat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dLng/2)**2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
     return R * c
 
-# Запрос к Overpass API для получения всех АЗС в радиусе 200 км от Москвы
+# Запрос к Overpass API
 overpass_url = "https://overpass-api.de/api/interpreter"
 overpass_query = f"""
-[out:json][timeout:60];
+[out:json][timeout:90];
 (
   node["amenity"="fuel"](around:{RADIUS_KM * 1000},{CENTER_LAT},{CENTER_LNG});
   way["amenity"="fuel"](around:{RADIUS_KM * 1000},{CENTER_LAT},{CENTER_LNG});
-  relation["amenity"="fuel"](around:{RADIUS_KM * 1000},{CENTER_LAT},{CENTER_LNG});
 );
 out center body;
 """
 
 print("Запрашиваю данные из OpenStreetMap...")
-response = requests.get(overpass_url, data=overpass_query)
-data = response.json()
+
+try:
+    response = requests.post(overpass_url, data=overpass_query, timeout=120)
+    response.raise_for_status()
+    
+    # Проверяем, что ответ не пустой
+    if not response.text.strip():
+        print("Ошибка: Overpass API вернул пустой ответ")
+        exit(1)
+    
+    data = response.json()
+    
+except requests.exceptions.RequestException as e:
+    print(f"Ошибка при запросе к Overpass API: {e}")
+    exit(1)
+except json.JSONDecodeError as e:
+    print(f"Ошибка парсинга JSON: {e}")
+    print(f"Ответ сервера: {response.text[:500]}")
+    exit(1)
 
 stations = []
 for element in data.get('elements', []):
@@ -45,7 +62,7 @@ for element in data.get('elements', []):
     else:
         continue
     
-    # Проверяем расстояние (дополнительная проверка)
+    # Проверяем расстояние
     distance = haversine(CENTER_LAT, CENTER_LNG, lat, lng)
     if distance > RADIUS_KM:
         continue
@@ -56,8 +73,16 @@ for element in data.get('elements', []):
     # Определяем название и бренд
     name = tags.get('name', 'АЗС')
     brand = tags.get('brand', tags.get('operator', 'Неизвестно'))
-    address = tags.get('addr:street', '') + ', ' + tags.get('addr:housenumber', '')
-    address = address.strip(', ')
+    
+    # Собираем адрес
+    address_parts = []
+    if tags.get('addr:city'):
+        address_parts.append(tags['addr:city'])
+    if tags.get('addr:street'):
+        address_parts.append(tags['addr:street'])
+    if tags.get('addr:housenumber'):
+        address_parts.append(tags['addr:housenumber'])
+    address = ', '.join(address_parts) if address_parts else 'Адрес не указан'
     
     # Определяем виды топлива
     fuels = []
@@ -91,7 +116,7 @@ for element in data.get('elements', []):
         'brand': brand,
         'lat': lat,
         'lng': lng,
-        'address': address if address else 'Адрес не указан',
+        'address': address,
         'fuels': fuels,
         'load': 'unknown',
         'updated_at': datetime.utcnow().isoformat() + 'Z'
@@ -100,6 +125,10 @@ for element in data.get('elements', []):
     stations.append(station)
 
 print(f"Найдено АЗС: {len(stations)}")
+
+if len(stations) == 0:
+    print("Предупреждение: Не найдено ни одной АЗС. Возможно, проблема с запросом.")
+    exit(1)
 
 # Сохраняем в файл
 with open('data/stations.json', 'w', encoding='utf-8') as f:
