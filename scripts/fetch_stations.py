@@ -9,12 +9,10 @@ MSK_TZ = timezone(timedelta(hours=3))
 # Координаты центра (Москва)
 CENTER_LAT = 55.7558
 CENTER_LNG = 37.6173
-
-# Радиус поиска (200 км)
 RADIUS_KM = 200
 
-# Используем тот же API, что и сайт gdebenz.ru
-API_URL = "https://api.gdebenz.ru/api/nearby"
+# Используем основной домен, как в браузере
+API_URL = "https://gdebenz.ru/api/nearby"
 
 print(f"Запрашиваю данные из {API_URL} (радиус {RADIUS_KM} км)...")
 
@@ -27,21 +25,32 @@ try:
     }
     
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         'Accept': 'application/json',
         'Referer': 'https://gdebenz.ru/'
     }
     
-    response = requests.get(API_URL, params=params, headers=headers, timeout=60)
+    response = requests.get(API_URL, params=params, headers=headers, timeout=30)
     response.raise_for_status()
     
+    # В ответе приходит сразу список [...] или объект. Проверим оба варианта.
     data = response.json()
     
-    # Данные могут быть в ключе 'stations' или сразу списком
-    raw_stations = data.get('stations', data) if isinstance(data, dict) else data
+    # Если данные внутри ключа 'stations' (на всякий случай)
+    if isinstance(data, dict) and 'stations' in data:
+        raw_stations = data['stations']
+    elif isinstance(data, list):
+        raw_stations = data
+    else:
+        print("Неизвестный формат ответа API")
+        print(data)
+        exit(1)
 
 except requests.exceptions.RequestException as e:
     print(f"Ошибка при запросе к API: {e}")
+    if hasattr(e, 'response') and e.response is not None:
+        print(f"Код ответа: {e.response.status_code}")
+        print(f"Текст ответа: {e.response.text[:500]}")
     exit(1)
 except json.JSONDecodeError as e:
     print(f"Ошибка парсинга JSON: {e}")
@@ -54,83 +63,92 @@ for item in raw_stations:
     if 'lat' not in item or 'lon' not in item:
         continue
     
-    lat = float(item['lat'])
-    lng = float(item['lon'])
-    
-    # --- ЛОГИКА СТАТУСА (КАК НА САЙТЕ) ---
-    status = item.get('status', 'unknown')
-    detail = item.get('detail', '')
+    try:
+        lat = float(item['lat'])
+        lng = float(item['lon'])
+    except (ValueError, TypeError):
+        continue
+
+    # --- ЛОГИКА СТАТУСА ---
+    # В твоем файле были поля: status ("yes", "no"), fuels_now ("92,95"), conflict ("queue")
+    status = item.get('status', '') 
     fuels_now_str = item.get('fuels_now', '')
+    conflict = item.get('conflict', '')
     
-    # Определяем load (цвет метки)
+    # Определяем load (цвет кружка)
     if status == 'no':
-        load = 'high' # Красный - нет топлива
-    elif status == 'queue' or 'очередь' in detail.lower():
-        load = 'medium' # Жёлтый - очередь
+        load = 'high' # Красный
+    elif conflict == 'queue' or 'очередь' in str(item.get('detail', '')).lower():
+        load = 'medium' # Желтый
     elif status == 'yes':
-        load = 'low' # Зелёный - есть
+        load = 'low' # Зеленый
     else:
-        load = 'unknown' # Серый - нет данных
-    
+        # Если статуса нет, но есть топливо в списке, считаем зеленым
+        if fuels_now_str:
+            load = 'low'
+        else:
+            load = 'unknown' # Серый
+
     # --- ЛОГИКА ТОПЛИВА ---
-    # Парсим строку "92,95,ДТ" в список
-    available_fuels = []
-    if fuels_now_str:
-        available_fuels = [f.strip() for f in fuels_now_str.split(',')]
-    
-    # Формируем список всех видов топлива для отображения
-    # Если статус 'no', то всё недоступно.
-    # Если статус 'yes', то доступно только то, что в fuels_now (или всё, если список пуст, но статус yes - значит есть хоть что-то).
-    
-    all_fuels_types = ['92', '95', '98', '100', 'ДТ']
     fuels_list = []
     
-    for fuel_code in all_fuels_types:
-        # Нормализуем название для отображения
-        display_name = f"АИ-{fuel_code}" if fuel_code.isdigit() else fuel_code
+    # Парсим строку наличия "92,95,ДТ"
+    available_types = []
+    if fuels_now_str:
+        available_types = [x.strip() for x in fuels_now_str.split(',')]
+
+    # Список всех возможных типов для отображения
+    all_types = {'92': 'АИ-92', '95': 'АИ-95', '98': 'АИ-98', '100': 'АИ-100', 'ДТ': 'ДТ', 'DT': 'ДТ'}
+    
+    # Цены (если есть в ответе, в твоем примере их не было в корне, но проверим prices_now)
+    prices = item.get('prices_now', {})
+
+    for code, name in all_types.items():
+        # Проверяем наличие
+        is_available = None
         
-        is_available = False
-        
-        if load == 'high':
+        if status == 'no':
             is_available = False
-        elif load == 'unknown':
-            is_available = None # Неизвестно
-        else:
-            # Если есть конкретный список fuels_now
-            if available_fuels:
-                # Проверяем вхождение (учитывая, что может быть "92" или "АИ-92")
-                is_available = any(fuel_code in f for f in available_fuels)
+        elif status == 'yes' or fuels_now_str:
+            # Если есть список fuels_now, проверяем по нему
+            if available_types:
+                is_available = code in available_types
             else:
-                # Если списка нет, но статус yes - считаем, что основное топливо есть
-                # Но лучше показать как неизвестно, если нет точных данных
-                is_available = True # Или None, если хочешь строже
-            
+                # Если списка нет, но статус yes - предполагаем, что всё есть (или неизвестно)
+                # Но лучше поставить None, если нет точных данных
+                is_available = True 
+        
+        # Цена
+        price = 0
+        if code in prices:
+            p_data = prices[code]
+            if isinstance(p_data, dict):
+                price = p_data.get('p', 0)
+            elif isinstance(p_data, (int, float)):
+                price = p_data
+        
+        # Добавляем в список, только если есть информация или это важный тип
+        # Чтобы не засорять, добавим всё, но с правильным статусом
         fuels_list.append({
-            'type': display_name,
-            'price': 0, # Цены в этом API нет, только наличие
+            'type': name,
+            'price': round(float(price), 2) if price else 0,
             'available': is_available
         })
 
     # Название и бренд
     brand = item.get('brand', 'АЗС')
     name = item.get('name', brand)
-    address = item.get('addr', '')
+    address = item.get('addr', item.get('address', ''))
     
     # Время
-    last_at_str = item.get('last_at', '')
-    if last_at_str:
-        try:
-            # Парсим время (оно приходит без таймзоны, считаем как МСК)
-            dt = datetime.strptime(last_at_str, "%Y-%m-%d %H:%M:%S")
-            dt = dt.replace(tzinfo=MSK_TZ)
-            updated_at = dt.isoformat()
-        except:
-            updated_at = datetime.now(MSK_TZ).isoformat()
-    else:
-        updated_at = datetime.now(MSK_TZ).isoformat()
+    updated_at = datetime.now(MSK_TZ).isoformat()
+    if 'updated_at' in item:
+        updated_at = item['updated_at']
+    elif 'last_at' in item:
+         updated_at = item['last_at']
 
-    station = {
-        'id': item.get('osm_id', str(lat)+str(lng)),
+    stations.append({
+        'id': str(item.get('id', item.get('osm_id', f"{lat}{lng}"))),
         'name': name,
         'brand': brand,
         'lat': lat,
@@ -139,24 +157,21 @@ for item in raw_stations:
         'fuels': fuels_list,
         'load': load,
         'updated_at': updated_at
-    }
-    
-    stations.append(station)
+    })
 
-print(f"Найдено АЗС с данными: {len(stations)}")
+print(f"Найдено АЗС: {len(stations)}")
 
 # Статистика
 green = sum(1 for s in stations if s['load'] == 'low')
 yellow = sum(1 for s in stations if s['load'] == 'medium')
 red = sum(1 for s in stations if s['load'] == 'high')
-print(f"Зелёных (есть): {green}, Жёлтых (очередь): {yellow}, Красных (нет): {red}")
+print(f"Зеленых: {green}, Желтых: {yellow}, Красных: {red}")
 
-if len(stations) == 0:
-    print("Ошибка: Не найдено ни одной АЗС. Возможно, API изменился.")
+if not stations:
+    print("Ошибка: Список пуст")
     exit(1)
 
-# Сохраняем
 with open('data/stations.json', 'w', encoding='utf-8') as f:
     json.dump(stations, f, ensure_ascii=False, indent=2)
 
-print("Данные сохранены в data/stations.json")
+print("Данные сохранены.")
