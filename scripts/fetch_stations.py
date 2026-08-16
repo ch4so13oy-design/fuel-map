@@ -1,177 +1,110 @@
 import requests
 import json
+import math
 from datetime import datetime, timezone, timedelta
-import time
 
-# Московское время (UTC+3)
+# Московское время
 MSK_TZ = timezone(timedelta(hours=3))
 
-# Координаты центра (Москва)
+# Координаты центра (Москва) и радиус 200 км
 CENTER_LAT = 55.7558
 CENTER_LNG = 37.6173
 RADIUS_KM = 200
 
-# Используем основной домен, как в браузере
-API_URL = "https://gdebenz.ru/api/nearby"
+print(f"Запрашиваю ВСЕ заправки в радиусе {RADIUS_KM} км из OpenStreetMap...")
 
-print(f"Запрашиваю данные из {API_URL} (радиус {RADIUS_KM} км)...")
+# Запрос к Overpass API (возвращает все объекты amenity=fuel)
+overpass_url = "https://overpass-api.de/api/interpreter"
+overpass_query = f"""
+[out:json][timeout:180];
+(
+  node["amenity"="fuel"](around:{RADIUS_KM * 1000},{CENTER_LAT},{CENTER_LNG});
+  way["amenity"="fuel"](around:{RADIUS_KM * 1000},{CENTER_LAT},{CENTER_LNG});
+);
+out center body;
+"""
 
 try:
-    params = {
-        'lat': CENTER_LAT,
-        'lon': CENTER_LNG,
-        'radius_km': RADIUS_KM,
-        '_': int(time.time() * 1000) # Защита от кэша
-    }
-    
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'application/json',
-        'Referer': 'https://gdebenz.ru/'
-    }
-    
-    response = requests.get(API_URL, params=params, headers=headers, timeout=30)
+    response = requests.get(overpass_url, data=overpass_query, timeout=200)
     response.raise_for_status()
-    
-    # В ответе приходит сразу список [...] или объект. Проверим оба варианта.
     data = response.json()
-    
-    # Если данные внутри ключа 'stations' (на всякий случай)
-    if isinstance(data, dict) and 'stations' in data:
-        raw_stations = data['stations']
-    elif isinstance(data, list):
-        raw_stations = data
-    else:
-        print("Неизвестный формат ответа API")
-        print(data)
-        exit(1)
-
-except requests.exceptions.RequestException as e:
-    print(f"Ошибка при запросе к API: {e}")
-    if hasattr(e, 'response') and e.response is not None:
-        print(f"Код ответа: {e.response.status_code}")
-        print(f"Текст ответа: {e.response.text[:500]}")
-    exit(1)
-except json.JSONDecodeError as e:
-    print(f"Ошибка парсинга JSON: {e}")
+except Exception as e:
+    print(f"Ошибка при запросе к Overpass API: {e}")
     exit(1)
 
 stations = []
 
-for item in raw_stations:
-    # Пропускаем, если нет координат
-    if 'lat' not in item or 'lon' not in item:
-        continue
-    
-    try:
-        lat = float(item['lat'])
-        lng = float(item['lon'])
-    except (ValueError, TypeError):
-        continue
-
-    # --- ЛОГИКА СТАТУСА ---
-    # В твоем файле были поля: status ("yes", "no"), fuels_now ("92,95"), conflict ("queue")
-    status = item.get('status', '') 
-    fuels_now_str = item.get('fuels_now', '')
-    conflict = item.get('conflict', '')
-    
-    # Определяем load (цвет кружка)
-    if status == 'no':
-        load = 'high' # Красный
-    elif conflict == 'queue' or 'очередь' in str(item.get('detail', '')).lower():
-        load = 'medium' # Желтый
-    elif status == 'yes':
-        load = 'low' # Зеленый
+for element in data.get('elements', []):
+    # Получаем координаты
+    if 'lat' in element:
+        lat = element['lat']
+        lng = element['lon']
+    elif 'center' in element:
+        lat = element['center']['lat']
+        lng = element['center']['lon']
     else:
-        # Если статуса нет, но есть топливо в списке, считаем зеленым
-        if fuels_now_str:
-            load = 'low'
-        else:
-            load = 'unknown' # Серый
-
-    # --- ЛОГИКА ТОПЛИВА ---
-    fuels_list = []
+        continue
     
-    # Парсим строку наличия "92,95,ДТ"
-    available_types = []
-    if fuels_now_str:
-        available_types = [x.strip() for x in fuels_now_str.split(',')]
-
-    # Список всех возможных типов для отображения
-    all_types = {'92': 'АИ-92', '95': 'АИ-95', '98': 'АИ-98', '100': 'АИ-100', 'ДТ': 'ДТ', 'DT': 'ДТ'}
+    # Теги (информация о заправке)
+    tags = element.get('tags', {})
     
-    # Цены (если есть в ответе, в твоем примере их не было в корне, но проверим prices_now)
-    prices = item.get('prices_now', {})
-
-    for code, name in all_types.items():
-        # Проверяем наличие
-        is_available = None
-        
-        if status == 'no':
-            is_available = False
-        elif status == 'yes' or fuels_now_str:
-            # Если есть список fuels_now, проверяем по нему
-            if available_types:
-                is_available = code in available_types
-            else:
-                # Если списка нет, но статус yes - предполагаем, что всё есть (или неизвестно)
-                # Но лучше поставить None, если нет точных данных
-                is_available = True 
-        
-        # Цена
-        price = 0
-        if code in prices:
-            p_data = prices[code]
-            if isinstance(p_data, dict):
-                price = p_data.get('p', 0)
-            elif isinstance(p_data, (int, float)):
-                price = p_data
-        
-        # Добавляем в список, только если есть информация или это важный тип
-        # Чтобы не засорять, добавим всё, но с правильным статусом
-        fuels_list.append({
-            'type': name,
-            'price': round(float(price), 2) if price else 0,
-            'available': is_available
-        })
-
     # Название и бренд
-    brand = item.get('brand', 'АЗС')
-    name = item.get('name', brand)
-    address = item.get('addr', item.get('address', ''))
+    name = tags.get('name', 'АЗС')
+    brand = tags.get('brand', tags.get('operator', name))
     
-    # Время
-    updated_at = datetime.now(MSK_TZ).isoformat()
-    if 'updated_at' in item:
-        updated_at = item['updated_at']
-    elif 'last_at' in item:
-         updated_at = item['last_at']
+    # Адрес
+    addr_street = tags.get('addr:street', '')
+    addr_housenumber = tags.get('addr:housenumber', '')
+    address = f"{addr_street}, {addr_housenumber}".strip(', ')
+    if not address:
+        address = "Адрес не указан"
 
-    stations.append({
-        'id': str(item.get('id', item.get('osm_id', f"{lat}{lng}"))),
+    # Топливо (пытаемся понять из тегов, но часто их нет, тогда ставим стандартный набор)
+    fuels = []
+    fuel_map = {
+        'fuel:octane_92': 'АИ-92',
+        'fuel:octane_95': 'АИ-95',
+        'fuel:octane_98': 'АИ-98',
+        'fuel:diesel': 'ДТ',
+        'fuel:lpg': 'Газ'
+    }
+    
+    has_fuel_info = False
+    for key, fuel_name in fuel_map.items():
+        if tags.get(key) == 'yes':
+            fuels.append({'type': fuel_name, 'price': 0, 'available': True})
+            has_fuel_info = True
+    
+    # Если нет конкретной инфо, добавляем базовый набор (чтобы карточка не была пустой)
+    if not has_fuel_info:
+        fuels = [
+            {'type': 'АИ-92', 'price': 0, 'available': None}, # None = неизвестно
+            {'type': 'АИ-95', 'price': 0, 'available': None},
+            {'type': 'ДТ', 'price': 0, 'available': None}
+        ]
+
+    station = {
+        'id': f"osm-{element['id']}",
         'name': name,
         'brand': brand,
         'lat': lat,
         'lng': lng,
         'address': address,
-        'fuels': fuels_list,
-        'load': load,
-        'updated_at': updated_at
-    })
+        'fuels': fuels,
+        'load': 'unknown', # По умолчанию нет данных о очереди
+        'updated_at': datetime.now(MSK_TZ).isoformat()
+    }
+    
+    stations.append(station)
 
-print(f"Найдено АЗС: {len(stations)}")
+print(f"Найдено заправок: {len(stations)}")
 
-# Статистика
-green = sum(1 for s in stations if s['load'] == 'low')
-yellow = sum(1 for s in stations if s['load'] == 'medium')
-red = sum(1 for s in stations if s['load'] == 'high')
-print(f"Зеленых: {green}, Желтых: {yellow}, Красных: {red}")
-
-if not stations:
-    print("Ошибка: Список пуст")
+if len(stations) == 0:
+    print("Ошибка: Не найдено ни одной заправки.")
     exit(1)
 
+# Сохраняем
 with open('data/stations.json', 'w', encoding='utf-8') as f:
     json.dump(stations, f, ensure_ascii=False, indent=2)
 
-print("Данные сохранены.")
+print("Данные сохранены в data/stations.json")
