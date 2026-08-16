@@ -19,6 +19,47 @@
             width: 100%;
             height: 100vh;
         }
+        
+        /* Панель фильтров сверху */
+        .filters-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 12px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .filters-panel::-webkit-scrollbar {
+            display: none;
+        }
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #e2e8f0;
+            background: white;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover {
+            border-color: #2563eb;
+            color: #2563eb;
+        }
+        .filter-btn.active {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+        
         /* Стили для всплывающего окна */
         .leaflet-popup-content-wrapper {
             background: #ffffff;
@@ -67,6 +108,16 @@
     </style>
 </head>
 <body>
+    <!-- Панель фильтров -->
+    <div class="filters-panel">
+        <button class="filter-btn active" data-filter="all">Все</button>
+        <button class="filter-btn" data-filter="АИ-92">АИ-92</button>
+        <button class="filter-btn" data-filter="АИ-95">АИ-95</button>
+        <button class="filter-btn" data-filter="АИ-98">АИ-98</button>
+        <button class="filter-btn" data-filter="ДТ">ДТ</button>
+        <button class="filter-btn" data-filter="free">🟢 Свободные</button>
+    </div>
+    
     <div id="map"></div>
     
     <!-- Подключаем скрипт Leaflet -->
@@ -82,12 +133,16 @@
             maxZoom: 19
         }).addTo(map);
         
+        // Массив для хранения меток
+        let markers = [];
+        let stationsData = [];
+        
         // Функция для определения цвета метки
         function getMarkerColor(load) {
-            if (load === 'low') return '#16a34a';      // зелёный
-            if (load === 'medium') return '#ca8a04';   // жёлтый
-            if (load === 'high') return '#dc2626';     // красный
-            return '#94a3b8';                          // серый
+            if (load === 'low') return '#16a34a';
+            if (load === 'medium') return '#ca8a04';
+            if (load === 'high') return '#dc2626';
+            return '#94a3b8';
         }
         
         // Функция для создания HTML всплывающего окна
@@ -119,26 +174,69 @@
             `;
         }
         
+        // Функция для отображения меток
+        function displayMarkers(stations) {
+            // Удаляем старые метки
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+            
+            // Добавляем новые метки
+            stations.forEach(station => {
+                const color = getMarkerColor(station.load);
+                
+                const marker = L.circleMarker([station.lat, station.lng], {
+                    radius: 10,
+                    fillColor: color,
+                    color: '#fff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.9
+                }).addTo(map);
+                
+                marker.bindPopup(createPopupContent(station));
+                markers.push(marker);
+            });
+        }
+        
+        // Функция фильтрации
+        function filterStations(filterType) {
+            let filtered = stationsData;
+            
+            if (filterType !== 'all') {
+                if (filterType === 'free') {
+                    // Только свободные
+                    filtered = stationsData.filter(station => station.load === 'low');
+                } else {
+                    // По типу топлива
+                    filtered = stationsData.filter(station => 
+                        station.fuels.some(fuel => fuel.type === filterType && fuel.available)
+                    );
+                }
+            }
+            
+            displayMarkers(filtered);
+        }
+        
+        // Обработчики кнопок фильтров
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Убираем активный класс у всех кнопок
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                // Добавляем активный класс нажатой кнопке
+                this.classList.add('active');
+                
+                // Фильтруем
+                const filterType = this.getAttribute('data-filter');
+                filterStations(filterType);
+            });
+        });
+        
         // Загружаем данные из stations.json
         fetch('data/stations.json')
             .then(response => response.json())
             .then(stations => {
-                stations.forEach(station => {
-                    const color = getMarkerColor(station.load);
-                    
-                    // Создаём круглую метку
-                    const marker = L.circleMarker([station.lat, station.lng], {
-                        radius: 10,
-                        fillColor: color,
-                        color: '#fff',
-                        weight: 2,
-                        opacity: 1,
-                        fillOpacity: 0.9
-                    }).addTo(map);
-                    
-                    // Добавляем всплывающее окно
-                    marker.bindPopup(createPopupContent(station));
-                });
+                stationsData = stations;
+                displayMarkers(stations);
             })
             .catch(error => {
                 console.error('Ошибка загрузки данных:', error);
