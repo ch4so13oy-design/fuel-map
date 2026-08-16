@@ -13,7 +13,7 @@
             margin: 0;
             padding: 0;
             font-family: system-ui, -apple-system, sans-serif;
-            background-color: #1a1a1a;
+            background-color: #f8f9fa;
         }
         #map {
             width: 100%;
@@ -21,22 +21,49 @@
         }
         /* Стили для всплывающего окна */
         .leaflet-popup-content-wrapper {
-            background: #2a2a2a;
-            color: #fff;
-            border-radius: 8px;
+            background: #ffffff;
+            color: #1a1a1a;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
         .leaflet-popup-tip {
-            background: #2a2a2a;
+            background: #ffffff;
         }
         .fuel-available {
-            color: #4ade80;
+            color: #16a34a;
+            font-weight: 600;
         }
         .fuel-unavailable {
-            color: #f87171;
+            color: #dc2626;
+            font-weight: 600;
         }
-        .load-low { color: #4ade80; }
-        .load-medium { color: #fbbf24; }
-        .load-high { color: #f87171; }
+        .load-low { color: #16a34a; font-weight: 600; }
+        .load-medium { color: #ca8a04; font-weight: 600; }
+        .load-high { color: #dc2626; font-weight: 600; }
+        .station-name {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .station-info {
+            color: #64748b;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+        .fuel-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .fuel-row:last-child {
+            border-bottom: none;
+        }
+        .updated-time {
+            color: #94a3b8;
+            font-size: 11px;
+            margin-top: 8px;
+        }
     </style>
 </head>
 <body>
@@ -49,18 +76,18 @@
         // Создаём карту, центр — Москва
         var map = L.map('map').setView([55.7558, 37.6173], 12);
         
-        // Добавляем тёмный слой карты CartoDB Dark Matter
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        // Добавляем светлый слой карты CartoDB Positron
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '© OpenStreetMap © CARTO',
             maxZoom: 19
         }).addTo(map);
         
         // Функция для определения цвета метки
         function getMarkerColor(load) {
-            if (load === 'low') return '#4ade80';      // зелёный
-            if (load === 'medium') return '#fbbf24';   // жёлтый
-            if (load === 'high') return '#f87171';     // красный
-            return '#9ca3af';                          // серый
+            if (load === 'low') return '#16a34a';      // зелёный
+            if (load === 'medium') return '#ca8a04';   // жёлтый
+            if (load === 'high') return '#dc2626';     // красный
+            return '#94a3b8';                          // серый
         }
         
         // Функция для создания HTML всплывающего окна
@@ -69,7 +96,12 @@
             station.fuels.forEach(fuel => {
                 const statusClass = fuel.available ? 'fuel-available' : 'fuel-unavailable';
                 const statusText = fuel.available ? '✅ есть' : '❌ нет';
-                fuelsHtml += `<div>${fuel.type}: ${fuel.price} ₽ <span class="${statusClass}">${statusText}</span></div>`;
+                fuelsHtml += `
+                    <div class="fuel-row">
+                        <span>${fuel.type}</span>
+                        <span>${fuel.price} ₽ <span class="${statusClass}">${statusText}</span></span>
+                    </div>
+                `;
             });
             
             const loadText = {
@@ -79,13 +111,11 @@
             };
             
             return `
-                <strong>${station.name}</strong><br>
-                ${station.brand} · ${station.address}<br>
-                <hr style="border-color: #444; margin: 8px 0;">
+                <div class="station-name">${station.name}</div>
+                <div class="station-info">${station.brand} · ${station.address}</div>
                 ${fuelsHtml}
-                <hr style="border-color: #444; margin: 8px 0;">
-                <div class="load-${station.load}">${loadText[station.load]}</div>
-                <small style="color: #888;">Обновлено: ${new Date(station.updated_at).toLocaleString('ru-RU')}</small>
+                <div class="load-${station.load}" style="margin-top: 8px;">${loadText[station.load]}</div>
+                <div class="updated-time">Обновлено: ${new Date(station.updated_at).toLocaleString('ru-RU')}</div>
             `;
         }
         
@@ -103,7 +133,7 @@
                         color: '#fff',
                         weight: 2,
                         opacity: 1,
-                        fillOpacity: 0.8
+                        fillOpacity: 0.9
                     }).addTo(map);
                     
                     // Добавляем всплывающее окно
