@@ -1,0 +1,47 @@
+[
+  {
+    "id": "azs-001",
+    "name": "АЗС Лукойл",
+    "brand": "Лукойл",
+    "lat": 55.7558,
+    "lng": 37.6173,
+    "address": "ул. Тверская, 1",
+    "fuels": [
+      {"type": "АИ-92", "price": 56.9, "available": true},
+      {"type": "АИ-95", "price": 61.4, "available": true},
+      {"type": "ДТ", "price": 65.2, "available": false}
+    ],
+    "load": "low",
+    "updated_at": "2026-08-16T10:00:00Z"
+  },
+  {
+    "id": "azs-002",
+    "name": "АЗС Роснефть",
+    "brand": "Роснефть",
+    "lat": 55.7600,
+    "lng": 37.6200,
+    "address": "ул. Пушкинская, 5",
+    "fuels": [
+      {"type": "АИ-92", "price": 55.5, "available": true},
+      {"type": "АИ-95", "price": 60.0, "available": false},
+      {"type": "АИ-98", "price": 70.0, "available": true}
+    ],
+    "load": "medium",
+    "updated_at": "2026-08-16T09:30:00Z"
+  },
+  {
+    "id": "azs-003",
+    "name": "АЗС Газпромнефть",
+    "brand": "Газпромнефть",
+    "lat": 55.7500,
+    "lng": 37.6100,
+    "address": "ул. Арбат, 10",
+    "fuels": [
+      {"type": "АИ-92", "price": 57.0, "available": false},
+      {"type": "АИ-95", "price": 62.0, "available": true},
+      {"type": "ДТ", "price": 66.0, "available": true}
+    ],
+    "load": "high",
+    "updated_at": "2026-08-16T08:00:00Z"
+  }
+]
