@@ -630,48 +630,6 @@
     "updated_at": "2026-08-16 06:58:22"
   },
   {
-    "id": "usr_uJltWEX23dk",
-    "name": "Роснефть",
-    "brand": "Роснефть",
-    "lat": 55.794707010096836,
-    "lng": 37.63482715923601,
-    "address": "пр-кт Мира, 94А",
-    "fuels": [
-      {
-        "type": "АИ-92",
-        "price": 0,
-        "available": false
-      },
-      {
-        "type": "АИ-95",
-        "price": 0,
-        "available": false
-      },
-      {
-        "type": "АИ-98",
-        "price": 0,
-        "available": false
-      },
-      {
-        "type": "АИ-100",
-        "price": 0,
-        "available": false
-      },
-      {
-        "type": "ДТ",
-        "price": 0,
-        "available": false
-      },
-      {
-        "type": "ДТ",
-        "price": 0,
-        "available": false
-      }
-    ],
-    "load": "high",
-    "updated_at": "2026-08-16 05:33:29"
-  },
-  {
     "id": "598471636",
     "name": "ТрансАЗС",
     "brand": "ТрансАЗС",
@@ -2310,6 +2268,48 @@
     "updated_at": "2026-08-16 07:41:10"
   },
   {
+    "id": "usr_yZLOpJzLMyg",
+    "name": "Роснефть",
+    "brand": "Роснефть",
+    "lat": 55.79400925559069,
+    "lng": 37.71486282348633,
+    "address": "ул Преображенский Вал, 19",
+    "fuels": [
+      {
+        "type": "АИ-92",
+        "price": 0,
+        "available": false
+      },
+      {
+        "type": "АИ-95",
+        "price": 0,
+        "available": false
+      },
+      {
+        "type": "АИ-98",
+        "price": 0,
+        "available": false
+      },
+      {
+        "type": "АИ-100",
+        "price": 0,
+        "available": false
+      },
+      {
+        "type": "ДТ",
+        "price": 0,
+        "available": false
+      },
+      {
+        "type": "ДТ",
+        "price": 0,
+        "available": false
+      }
+    ],
+    "load": "high",
+    "updated_at": "2026-08-16 07:53:42"
+  },
+  {
     "id": "usr_FbkdD5PJMYU",
     "name": "Plus",
     "brand": "Plus",
@@ -2518,6 +2518,48 @@
     ],
     "load": "high",
     "updated_at": "2026-08-15 20:57:08"
+  },
+  {
+    "id": "1749413323",
+    "name": "Газпромнефть",
+    "brand": "Газпромнефть",
+    "lat": 55.6736122,
+    "lng": 37.6570784,
+    "address": "ул Садовники, 11",
+    "fuels": [
+      {
+        "type": "АИ-92",
+        "price": 0,
+        "available": false
+      },
+      {
+        "type": "АИ-95",
+        "price": 0,
+        "available": false
+      },
+      {
+        "type": "АИ-98",
+        "price": 0,
+        "available": false
+      },
+      {
+        "type": "АИ-100",
+        "price": 0,
+        "available": false
+      },
+      {
+        "type": "ДТ",
+        "price": 0,
+        "available": false
+      },
+      {
+        "type": "ДТ",
+        "price": 0,
+        "available": false
+      }
+    ],
+    "load": "high",
+    "updated_at": "2026-08-16 07:53:23"
   },
   {
     "id": "usr_YbC5yaQopAU",
@@ -4617,7 +4659,7 @@
       }
     ],
     "load": "medium",
-    "updated_at": "2026-08-16 07:11:06"
+    "updated_at": "2026-08-16 07:53:38"
   },
   {
     "id": "244205852",
@@ -4672,6 +4714,48 @@
       {
         "type": "АИ-92",
         "price": 0,
+        "available": true
+      },
+      {
+        "type": "АИ-95",
+        "price": 0,
+        "available": true
+      },
+      {
+        "type": "АИ-98",
+        "price": 0,
+        "available": true
+      },
+      {
+        "type": "АИ-100",
+        "price": 0,
+        "available": true
+      },
+      {
+        "type": "ДТ",
+        "price": 0,
+        "available": true
+      },
+      {
+        "type": "ДТ",
+        "price": 0,
+        "available": true
+      }
+    ],
+    "load": "low",
+    "updated_at": "2026-08-16 04:53:40"
+  },
+  {
+    "id": "usr_uJltWEX23dk",
+    "name": "Роснефть",
+    "brand": "Роснефть",
+    "lat": 55.794707010096836,
+    "lng": 37.63482715923601,
+    "address": "пр-кт Мира, 94А",
+    "fuels": [
+      {
+        "type": "АИ-92",
+        "price": 0,
         "available": false
       },
       {
@@ -4701,7 +4785,7 @@
       }
     ],
     "load": "low",
-    "updated_at": "2026-08-16 04:53:40"
+    "updated_at": "2026-08-16 07:54:48"
   },
   {
     "id": "usr_tewZ80N3Gfc",
@@ -5732,12 +5816,12 @@
       {
         "type": "АИ-98",
         "price": 0,
-        "available": false
+        "available": true
       },
       {
         "type": "АИ-100",
         "price": 0,
-        "available": false
+        "available": true
       },
       {
         "type": "ДТ",
@@ -5747,11 +5831,11 @@
       {
         "type": "ДТ",
         "price": 0,
-        "available": false
+        "available": true
       }
     ],
     "load": "low",
-    "updated_at": "2026-08-16 07:11:28"
+    "updated_at": "2026-08-16 07:53:25"
   },
   {
     "id": "usr_9b7Do035u5k",
@@ -6759,7 +6843,7 @@
       }
     ],
     "load": "low",
-    "updated_at": "2026-08-16 07:50:58"
+    "updated_at": "2026-08-16 07:54:02"
   },
   {
     "id": "usr_nb6PeqhL6EQ",
@@ -6843,7 +6927,7 @@
       }
     ],
     "load": "low",
-    "updated_at": "2026-08-16 07:48:22"
+    "updated_at": "2026-08-16 07:54:27"
   },
   {
     "id": "43076189",
@@ -7014,48 +7098,6 @@
     "updated_at": "2026-08-16 07:01:37"
   },
   {
-    "id": "usr_yZLOpJzLMyg",
-    "name": "Роснефть",
-    "brand": "Роснефть",
-    "lat": 55.79400925559069,
-    "lng": 37.71486282348633,
-    "address": "ул Преображенский Вал, 19",
-    "fuels": [
-      {
-        "type": "АИ-92",
-        "price": 0,
-        "available": true
-      },
-      {
-        "type": "АИ-95",
-        "price": 0,
-        "available": true
-      },
-      {
-        "type": "АИ-98",
-        "price": 0,
-        "available": true
-      },
-      {
-        "type": "АИ-100",
-        "price": 0,
-        "available": true
-      },
-      {
-        "type": "ДТ",
-        "price": 0,
-        "available": true
-      },
-      {
-        "type": "ДТ",
-        "price": 0,
-        "available": true
-      }
-    ],
-    "load": "medium",
-    "updated_at": "2026-08-16 07:45:59"
-  },
-  {
     "id": "10106925795",
     "name": "Роснефть",
     "brand": "Роснефть",
@@ -7180,48 +7222,6 @@
     ],
     "load": "medium",
     "updated_at": "2026-08-16 07:17:50"
-  },
-  {
-    "id": "1749413323",
-    "name": "Газпромнефть",
-    "brand": "Газпромнефть",
-    "lat": 55.6736122,
-    "lng": 37.6570784,
-    "address": "ул Садовники, 11",
-    "fuels": [
-      {
-        "type": "АИ-92",
-        "price": 0,
-        "available": false
-      },
-      {
-        "type": "АИ-95",
-        "price": 0,
-        "available": false
-      },
-      {
-        "type": "АИ-98",
-        "price": 0,
-        "available": false
-      },
-      {
-        "type": "АИ-100",
-        "price": 0,
-        "available": false
-      },
-      {
-        "type": "ДТ",
-        "price": 0,
-        "available": true
-      },
-      {
-        "type": "ДТ",
-        "price": 0,
-        "available": false
-      }
-    ],
-    "load": "low",
-    "updated_at": "2026-08-16 07:28:07"
   },
   {
     "id": "489281884",
@@ -8145,7 +8145,7 @@
       }
     ],
     "load": "low",
-    "updated_at": "2026-08-16 07:03:14"
+    "updated_at": "2026-08-16 07:36:20"
   },
   {
     "id": "usr_YIUXjKHEtAk",
