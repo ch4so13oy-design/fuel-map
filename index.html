@@ -127,9 +127,9 @@
         // Создаём карту, центр — Москва
         var map = L.map('map').setView([55.7558, 37.6173], 12);
         
-        // Добавляем светлый слой карты CartoDB Positron
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap © CARTO',
+        // Добавляем светлый слой карты CartoDB Voyager
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap © CARTO Voyager',
             maxZoom: 19
         }).addTo(map);
         
