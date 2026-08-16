@@ -286,7 +286,7 @@
                 <div class="filter-options">
                     <div class="filter-chip" data-filter="low">🟢 Свободно</div>
                     <div class="filter-chip" data-filter="medium">🟡 Умеренно</div>
-                    <div class="filter-chip" data-filter="high">🔴 Очередь</div>
+                    <div class="filter-chip" data-filter="high">🔴 Нет топлива</div>
                 </div>
             </div>
             
@@ -354,21 +354,41 @@
         // Функция для создания HTML всплывающего окна
         function createPopupContent(station) {
             let fuelsHtml = '';
+            
+            // Сначала показываем доступное топливо
             station.fuels.forEach(fuel => {
-                const statusClass = fuel.available ? 'fuel-available' : 'fuel-unavailable';
-                const statusText = fuel.available ? '✅ есть' : '❌ нет';
-                fuelsHtml += `
-                    <div class="fuel-row">
-                        <span>${fuel.type}</span>
-                        <span>${fuel.price > 0 ? fuel.price + ' ₽' : '—'} <span class="${statusClass}">${statusText}</span></span>
-                    </div>
-                `;
+                if (fuel.available) {
+                    const priceText = fuel.price > 0 ? fuel.price + ' ₽' : '—';
+                    fuelsHtml += `
+                        <div class="fuel-row">
+                            <span>${fuel.type}</span>
+                            <span>${priceText} <span class="fuel-available">✅ есть</span></span>
+                        </div>
+                    `;
+                }
             });
+            
+            // Потом показываем недоступное топливо (перечёркнутое, серое)
+            station.fuels.forEach(fuel => {
+                if (!fuel.available) {
+                    fuelsHtml += `
+                        <div class="fuel-row" style="opacity: 0.5;">
+                            <span style="text-decoration: line-through; color: #94a3b8;">${fuel.type}</span>
+                            <span style="color: #94a3b8;"><span class="fuel-unavailable">❌ нет</span></span>
+                        </div>
+                    `;
+                }
+            });
+            
+            // Если вообще нет информации о топливе
+            if (!fuelsHtml) {
+                fuelsHtml = '<div style="color: #94a3b8; font-size: 13px;">Нет данных о топливе</div>';
+            }
             
             const loadText = {
                 'low': '🟢 Свободно',
                 'medium': '🟡 Умеренно',
-                'high': '🔴 Очередь',
+                'high': '🔴 Нет топлива',
                 'unknown': '⚪ Нет данных'
             };
             
