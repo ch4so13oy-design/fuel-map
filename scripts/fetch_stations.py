@@ -1,7 +1,10 @@
 import requests
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import time
+
+# Московское время (UTC+3)
+MSK_TZ = timezone(timedelta(hours=3))
 
 # Координаты прямоугольника (Москва и область до ~100 км)
 LAT1 = 54.5
@@ -53,15 +56,17 @@ for item in data:
     lng = float(item['lon'])
     
     # Определяем статус и загруженность
-    status = item.get('status', 'unknown')
+    status = item.get('status', '')
     conflict = item.get('conflict', '')
+    detail = item.get('detail', '')
     
-    if status == 'yes' and conflict != 'queue':
-        load = 'low'  # Есть топливо, нет очереди
+    # Логика определения статуса
+    if status == 'no' or 'не работает' in detail.lower():
+        load = 'high'  # Нет топлива / не работает
     elif status == 'yes' and conflict == 'queue':
         load = 'medium'  # Есть топливо, но очередь
-    elif status == 'no':
-        load = 'high'  # Нет топлива
+    elif status == 'yes':
+        load = 'low'  # Есть топливо, нет очереди
     else:
         load = 'unknown'
     
@@ -75,7 +80,14 @@ for item in data:
     prices_now = item.get('prices_now', {})
     fuels = []
     
-    if fuels_now:
+    # Если статус "нет топлива", помечаем все как недоступные
+    if load == 'high':
+        fuels = [
+            {'type': 'АИ-92', 'price': 0, 'available': False},
+            {'type': 'АИ-95', 'price': 0, 'available': False},
+            {'type': 'ДТ', 'price': 0, 'available': False}
+        ]
+    elif fuels_now:
         fuel_list = [f.strip() for f in fuels_now.split(',')]
         for fuel in fuel_list:
             fuel_type_map = {
@@ -103,7 +115,7 @@ for item in data:
                 'available': True
             })
     
-    # Если нет информации о топливе, добавляем базовый набор
+    # Если нет информации о топливе и статус неизвестен
     if not fuels:
         fuels = [
             {'type': 'АИ-92', 'price': 0, 'available': True},
@@ -111,8 +123,18 @@ for item in data:
             {'type': 'ДТ', 'price': 0, 'available': True}
         ]
     
-    # Время последнего обновления
-    last_at = item.get('last_at', datetime.utcnow().isoformat())
+    # Время последнего обновления в московском часовом поясе
+    last_at_str = item.get('last_at', '')
+    if last_at_str:
+        try:
+            # Парсим время и конвертируем в МСК
+            dt = datetime.fromisoformat(last_at_str.replace('Z', '+00:00'))
+            dt_msk = dt.astimezone(MSK_TZ)
+            last_at = dt_msk.isoformat()
+        except:
+            last_at = datetime.now(MSK_TZ).isoformat()
+    else:
+        last_at = datetime.now(MSK_TZ).isoformat()
     
     station = {
         'id': f"azs-{item.get('osm_id', id(item))}",
